@@ -1,0 +1,6 @@
+---
+- name: Install Keypass XC
+  snap:
+    state: present
+    name: keepassxc
+  become: true

@@ -1,0 +1,48 @@
+---
+- name: Check if openrbg is installed
+  command: openrgb --version
+  register: openrgb_version_cmd
+  changed_when: false
+  ignore_errors: true
+- name: Ensure packages are installed
+  package:
+    name: "{{ item }}"
+    state: present
+  become: true
+  with_items:
+    - build-essential
+    - debhelper
+    - qt5-qmake
+    - qtbase5-dev
+    - qtbase5-dev-tools
+    - qtchooser
+    - qtcreator
+    - libusb-1.0-0-dev
+    - libhidapi-dev
+    - libmbedtls-dev
+    - pkgconf
+  when: openrgb_version_cmd is failed
+- name: Load i2c-dev module
+  community.general.modprobe:
+    name: i2c-dev
+    state: present
+  become: true
+  when: openrgb_version_cmd is failed
+- name: Download repo
+  git:
+    repo: https://gitlab.com/CalcProgrammer1/OpenRGB
+    dest: ~/OpenRGB
+    version: release_0.6
+  when: openrgb_version_cmd is failed
+  notify: delete openrgb repo
+- name: Generate package
+  command:
+    cmd: dpkg-buildpackage -us -B
+    chdir: ~/OpenRGB
+  when: openrgb_version_cmd is failed
+  notify: delete openrgb generated files
+- name: Install package
+  apt:
+    deb: "{{ lookup('env', 'HOME') }}/openrgb_0.6.0_amd64.deb"
+  become: true
+  when: openrgb_version_cmd is failed
